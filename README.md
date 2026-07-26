@@ -46,6 +46,24 @@ npm run build
 Add the server to your MCP client with `GITHUB_TOKEN` in its environment. Keep
 `GITHUB_PERMISSION_MODE` set to `read` while inspecting pull requests.
 
+After the package is installed from npm, MCP clients can launch it without a
+repository clone:
+
+```json
+{
+  "mcpServers": {
+    "github-pr-review": {
+      "command": "npx",
+      "args": ["-y", "yeznor-github-pr-review-mcp"],
+      "env": {
+        "GITHUB_TOKEN": "github_pat_your_token",
+        "GITHUB_PERMISSION_MODE": "read"
+      }
+    }
+  }
+}
+```
+
 ## Claude Desktop
 
 Open Claude Desktop's MCP configuration:
@@ -114,6 +132,7 @@ both after write mode is enabled.
 
 GitHub permissions needed by the write tools:
 
+- Contents: Read — unified pull-request diffs
 - Pull requests: Write — inline comments and reviews
 - Issues: Write — labels, because GitHub exposes PR labels through the Issues
   API
