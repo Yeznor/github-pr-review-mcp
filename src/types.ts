@@ -25,5 +25,6 @@ export interface DiffLine {
   path: string;
   side: DiffSide;
   line: number;
+  position: number;
   text: string;
 }

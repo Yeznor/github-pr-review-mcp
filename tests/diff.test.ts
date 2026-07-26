@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { assertDiffTarget, parseUnifiedDiff } from "../src/diff.js";
+import {
+  assertDiffTarget,
+  parseUnifiedDiff,
+  resolveDiffPosition
+} from "../src/diff.js";
 
 const DIFF = `diff --git a/src/math.ts b/src/math.ts
 index 1111111..2222222 100644
@@ -20,20 +24,27 @@ describe("unified diff resolution", () => {
       path: "src/math.ts",
       side: "LEFT",
       line: 11,
+      position: 2,
       text: "  return total;"
     });
     expect(lines).toContainEqual({
       path: "src/math.ts",
       side: "RIGHT",
       line: 11,
+      position: 3,
       text: "  return Number(total);"
     });
     expect(lines).toContainEqual({
       path: "src/math.ts",
       side: "RIGHT",
       line: 12,
+      position: 4,
       text: "  // Preserve numeric output."
     });
+  });
+
+  it("resolves a validated line to GitHub's diff position", () => {
+    expect(resolveDiffPosition(DIFF, "src/math.ts", "RIGHT", 12)).toBe(4);
   });
 
   it("rejects a line that is not part of the current diff", () => {

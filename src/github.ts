@@ -1,7 +1,7 @@
 import { createAppAuth } from "@octokit/auth-app";
 import { Octokit } from "octokit";
 import type { Config } from "./config.js";
-import { assertDiffTarget } from "./diff.js";
+import { assertDiffTarget, resolveDiffPosition } from "./diff.js";
 import { requireWrite } from "./permissions.js";
 import type {
   DiffSide,
@@ -70,7 +70,10 @@ function makeClient(config: Config, token?: string): GitHubClient {
     previews: [],
     request: {
       headers: {
-        "X-GitHub-Api-Version": "2026-03-10"
+        // Octokit's generated schemas currently target this stable API version.
+        // Pinning it prevents newer preview schemas from changing comment
+        // positioning fields underneath the typed client.
+        "X-GitHub-Api-Version": "2022-11-28"
       }
     }
   };
@@ -314,6 +317,7 @@ export class GitHubService {
   }): Promise<unknown> {
     requireWrite(this.permissionMode, "post_review_comment");
     const commitId = input.commitId ?? (await this.headSha(input));
+    let position: number | undefined;
     if (input.subjectType === "line") {
       if (input.line === undefined || !input.side) {
         throw new Error("line and side are required for a line comment.");
@@ -327,7 +331,12 @@ export class GitHubService {
       if (fullDiff.truncated) {
         throw new Error("The pull request diff is too large to validate safely.");
       }
-      assertDiffTarget(fullDiff.diff, input.path, input.side, input.line);
+      position = resolveDiffPosition(
+        fullDiff.diff,
+        input.path,
+        input.side,
+        input.line
+      );
       if (input.startLine !== undefined) {
         assertDiffTarget(
           fullDiff.diff,
@@ -344,11 +353,9 @@ export class GitHubService {
       body: input.body,
       commit_id: commitId,
       path: input.path,
-      subject_type: input.subjectType,
-      ...(input.line === undefined ? {} : { line: input.line }),
-      ...(input.side ? { side: input.side } : {}),
-      ...(input.startLine === undefined ? {} : { start_line: input.startLine }),
-      ...(input.startSide ? { start_side: input.startSide } : {})
+      ...(input.subjectType === "file"
+        ? { subject_type: "file" as const }
+        : { position: position! })
     });
     return {
       id: response.data.id,
@@ -376,6 +383,11 @@ export class GitHubService {
       throw new Error(`${input.event} requires a non-empty review body.`);
     }
     const commitId = input.commitId ?? (await this.headSha(input));
+    let apiComments: Array<{
+      path: string;
+      body: string;
+      position: number;
+    }> = [];
     if (input.comments.length) {
       const fullDiff = await this.getPrDiff(
         input.owner,
@@ -387,12 +399,16 @@ export class GitHubService {
         throw new Error("The pull request diff is too large to validate safely.");
       }
       for (const comment of input.comments) {
-        assertDiffTarget(
-          fullDiff.diff,
-          comment.path,
-          comment.side,
-          comment.line
-        );
+        apiComments.push({
+          path: comment.path,
+          body: comment.body,
+          position: resolveDiffPosition(
+            fullDiff.diff,
+            comment.path,
+            comment.side,
+            comment.line
+          )
+        });
       }
     }
     const response = await this.writeClient.rest.pulls.createReview({
@@ -402,7 +418,7 @@ export class GitHubService {
       event: input.event,
       commit_id: commitId,
       ...(input.body ? { body: input.body } : {}),
-      comments: input.comments
+      comments: apiComments
     });
     return {
       id: response.data.id,
