@@ -1,0 +1,52 @@
+{
+  "name": "yeznor-github-pr-review-mcp",
+  "version": "0.1.0",
+  "description": "A security-conscious MCP server for triaging and reviewing GitHub pull requests.",
+  "type": "module",
+  "bin": {
+    "github-pr-review-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "prepack": "npm run build",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [
+    "mcp",
+    "github",
+    "pull-request",
+    "claude",
+    "code-review"
+  ],
+  "author": "Yeznor",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Yeznor/github-pr-review-mcp.git"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@octokit/auth-app": "^8.2.0",
+    "octokit": "^5.0.5",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  },
+  "overrides": {
+    "@hono/node-server": "^2.0.5"
+  }
+}
